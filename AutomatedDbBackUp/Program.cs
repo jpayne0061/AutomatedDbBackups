@@ -17,25 +17,34 @@ namespace AutomatedDbBackUp
 
         static void Main(string[] args)
         {
-            StartUpService startupService = new StartUpService();
-            _settings = startupService.GetSettings();
+            try
+            {
+                StartUpService startupService = new StartUpService();
+                _settings = startupService.GetSettings();
 
 
-            ShellCommands shellCommands = new ShellCommands();
-            Backup backup = new Backup(_settings);
+                ShellCommands shellCommands = new ShellCommands();
+                Backup backup = new Backup(_settings);
 
-            backup.CreateBackUp();
+                backup.CreateBackUp();
 
-            shellCommands.ExecuteShellCommand("mv", "/var/opt/mssql/data/AppDb.bak /var/data");
+                shellCommands.ExecuteShellCommand("mv", "/var/opt/mssql/data/AppDb.bak /var/data");
 
-            shellCommands.ExecuteShellCommand("chown", "jpayne0061 /var/data/AppDb.bak");
+                shellCommands.ExecuteShellCommand("chown", "jpayne0061 /var/data/AppDb.bak");
 
-            BlobServiceClient blobServiceClient = new BlobServiceClient(_settings.BlobConnString);
+                BlobServiceClient blobServiceClient = new BlobServiceClient(_settings.BlobConnString);
 
-            var blobClient = blobServiceClient.GetBlobContainerClient("six-week-sql-db-backups");
+                var blobClient = blobServiceClient.GetBlobContainerClient("six-week-sql-db-backups");
 
-            FileStream uploadFileStream = File.OpenRead("/var/data/AppDb.bak");
-            blobClient.UploadBlob("AppDb" + DateTime.UtcNow.ToFileTimeUtc().ToString() + ".bak", uploadFileStream);
+                FileStream uploadFileStream = File.OpenRead("/var/data/AppDb.bak");
+                blobClient.UploadBlob("AppDb" + DateTime.UtcNow.ToFileTimeUtc().ToString() + ".bak", uploadFileStream);
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText("dbBackUpLog", ex.StackTrace);
+
+                throw;
+            }
 
         }
 
